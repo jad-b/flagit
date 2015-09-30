@@ -6,13 +6,13 @@ import "time"
 type ChipotleOrder struct {
 	Rice             string
 	Beans            string
-	FajitaVegetables boolean
+	FajitaVegetables bool
 	Meat             string
 	Salsa            []string
-	Corn             boolean
-	SourCream        boolean
-	Cheese           boolean
-	Guacamole        boolean
+	Corn             bool
+	SourCream        bool
+	Cheese           bool
+	Guacamole        bool
 }
 
 type Address struct {
