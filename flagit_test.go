@@ -2,9 +2,47 @@ package flagit
 
 import (
 	"flag"
+	"os"
 	"strings"
 	"testing"
 )
+
+type TestStruct struct {
+	A string
+	B int
+}
+
+func (ts *TestStruct) NewFlagSet() (fs *flag.FlagSet, err error) {
+	fs := flag.NewFlagSet("TestStruct", flag.ContinueOnError)
+	// for each field in struct
+	// assign a flag, using the struct type
+	fs.StringVar(&ts.A, "a", "", "")
+	fs.IntVar(&ts.B, "b", 0, "")
+	return fs
+}
+
+func TestStructFlagging(t *testing.T) {
+	ts := TestStruct{}
+	os.Args = []string{
+		"prog",         // Dropped by flag.Parse
+		"-cmd",         // Should be ignored
+		"-test-struct", // This is an auto-generated flag...
+		"-a",           // Which parses its sub-flag using a FlagSet
+		"word",
+		"-b",
+		"14",
+	}
+	futureTS, ok := FlagIt(&ts).(*TestStruct)
+	if !ok {
+		t.Fatal("Failed to type-assert interface{} to *TestStruct")
+	}
+	flag.Parse()
+	if futureTS.A != "word" {
+		t.Error("Failed to parse 'A string' from CLI")
+	} else if futureTS.B != 14 {
+		t.Error("Failed to parse 'B int' from CLI")
+	}
+}
 
 func TestFlagNaming(t *testing.T) {
 	fs, err := InferFlags(ChipotleOrder{})
