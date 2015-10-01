@@ -8,7 +8,10 @@ import (
 
 func TestFlagNaming(t *testing.T) {
 	fs, err := InferFlags(ChipotleOrder{})
-	if fs == nil || err != nil {
+	if err != nil {
+		if fs != nil {
+			fs.PrintDefaults()
+		}
 		t.Fatal(err)
 	}
 

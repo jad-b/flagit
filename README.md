@@ -38,3 +38,8 @@ $ ./main -placed-order \
 ```
 
 ...without you having to write all those flags yourself.
+
+
+### Reflection.
+For a Go playground example of the required reflection to do this magic, go
+here: http://play.golang.org/p/4bTL5v7OSi
