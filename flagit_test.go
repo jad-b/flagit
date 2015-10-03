@@ -1,16 +1,52 @@
 package flagit
 
 import (
+	"encoding/json"
 	"flag"
 	"os"
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 )
+
+type SampleStruct struct {
+	Int       int
+	Timestamp time.Time
+	Float     float64
+	String    string
+}
+
+func TestSampleStructFlagging(t *testing.T) {
+	ss := SampleStruct{}
+	fs := FlagIt(&ss)
+	args := []string{
+		"-int", "53",
+		"-float", "172.345",
+		"-string", "this be a string",
+		"-timestamp", "02 Jan 06 15:04 MST",
+	}
+
+	fs.Parse(args)
+	expTime, _ := time.Parse(args[3], time.RFC822)
+	if ss.Int != 53 ||
+		ss.Timestamp != expTime ||
+		ss.Float != 172.345 ||
+		ss.String != args[7] {
+		b, _ := json.MarshalIndent(&ss, "", "\t")
+		t.Errorf("Parsed value:\n%s", string(b))
+	}
+}
 
 type TestStruct struct {
 	A string
 	B int
+
+	APtr *string
+	BPtr *int
+
+	ASlice []string
+	BSlice []int
 }
 
 func (ts *TestStruct) NewFlagSet() (fs *flag.FlagSet, err error) {
@@ -23,19 +59,24 @@ func (ts *TestStruct) NewFlagSet() (fs *flag.FlagSet, err error) {
 }
 
 func TestFieldReflection(t *testing.T) {
-	ts := TestStruct{}
-	val := reflect.ValueOf(&ts).Elem()
-	typ := reflect.TypeOf(&ts).Elem()
-
-	fields := GetStructFields(typ)
-	fieldValues := GetFieldValues(val)
-
-	if len(fields) != len(fieldValues) {
-		t.Errorf("Differing numbers of StructFields (%d) than field Values (%d)", len(fields), len(fieldValues))
+	s, i := "a string", 42
+	ts := TestStruct{
+		A:      "A is a string",
+		B:      42,
+		APtr:   &s,
+		BPtr:   &i,
+		ASlice: []string{"ASlice", "is", "a", "[]string"},
+		BSlice: []int{42, 4, 2},
 	}
+	fMetas := GetFieldMeta(ts)
 
-	for i := 0; i < len(fields); i++ {
-		t.Logf("Field %s is a %s set to %s", fields[i].Name, fields[i].Type, fieldValues[i].String())
+	for i := 0; i < len(fMetas); i++ {
+		fm := fMetas[i]
+		b, _ := json.Marshal(&fm)
+		t.Logf("%s", string(b))
+		if fm.Kind == reflect.Ptr {
+			t.Log("\t is a pointer")
+		}
 	}
 }
 
@@ -50,27 +91,21 @@ func TestStructFlagging(t *testing.T) {
 		"-b",
 		"14",
 	}
-	fs, err := FlagIt(&ts)
-	if err != nil {
-		t.Fatal(err)
-	}
+	fs := FlagIt(&ts)
 	// Parsing the flagset should cause the struct fields to get set.
 	fs.Parse(os.Args[3:])
-	if ts.A != "word" {
-		t.Error("Failed to parse 'A string' from CLI")
-	} else if ts.B != 14 {
-		t.Error("Failed to parse 'B int' from CLI")
+	i := 0
+	fs.VisitAll(func(f *flag.Flag) {
+		t.Logf("Flag %s of type %s found", f.Name, reflect.ValueOf(f.Value).Type().String())
+		i++
+	})
+	if i != reflect.ValueOf(ts).NumField() {
+		t.Errorf("Expected %d flags, only found %d", reflect.ValueOf(ts).NumField(), i)
 	}
 }
 
 func TestFlagNaming(t *testing.T) {
-	fs, err := FlagIt(ChipotleOrder{})
-	if err != nil {
-		if fs != nil {
-			fs.PrintDefaults()
-		}
-		t.Fatal(err)
-	}
+	fs := FlagIt(ChipotleOrder{})
 
 	flags := []string{
 		"rice", "beans", "meat", "corn", "cheese", "guacamole",
@@ -84,10 +119,7 @@ func TestFlagNaming(t *testing.T) {
 }
 
 func TestStringFlagParsing(t *testing.T) {
-	fs, err := FlagIt(ChipotleOrder{})
-	if err != nil {
-		t.Fatal(err)
-	}
+	fs := FlagIt(ChipotleOrder{})
 
 	stringArgs := map[string]string{
 		"-rice":  "brown",
@@ -101,7 +133,7 @@ func TestStringFlagParsing(t *testing.T) {
 		args = append(args, k, v)
 	}
 
-	if err = fs.Parse(args); err != nil {
+	if err := fs.Parse(args); err != nil {
 		t.Fatal(err)
 	}
 
@@ -118,10 +150,7 @@ func TestStringFlagParsing(t *testing.T) {
 }
 
 func TestBoolFlagParsing(t *testing.T) {
-	fs, err := FlagIt(ChipotleOrder{})
-	if err != nil {
-		t.Fatal(err)
-	}
+	fs := FlagIt(ChipotleOrder{})
 	boolArgs := []string{
 		"-corn", "-cheese", "-guacamole", "-fajita-vegetables",
 		"-sour-cream",
