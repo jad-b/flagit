@@ -3,6 +3,7 @@ package flagit
 import (
 	"flag"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -13,12 +14,29 @@ type TestStruct struct {
 }
 
 func (ts *TestStruct) NewFlagSet() (fs *flag.FlagSet, err error) {
-	fs := flag.NewFlagSet("TestStruct", flag.ContinueOnError)
+	fs = flag.NewFlagSet("TestStruct", flag.ContinueOnError)
 	// for each field in struct
 	// assign a flag, using the struct type
 	fs.StringVar(&ts.A, "a", "", "")
 	fs.IntVar(&ts.B, "b", 0, "")
-	return fs
+	return fs, nil
+}
+
+func TestFieldReflection(t *testing.T) {
+	ts := TestStruct{}
+	val := reflect.ValueOf(&ts).Elem()
+	typ := reflect.TypeOf(&ts).Elem()
+
+	fields := GetStructFields(typ)
+	fieldValues := GetFieldValues(val)
+
+	if len(fields) != len(fieldValues) {
+		t.Errorf("Differing numbers of StructFields (%d) than field Values (%d)", len(fields), len(fieldValues))
+	}
+
+	for i := 0; i < len(fields); i++ {
+		t.Logf("Field %s is a %s set to %s", fields[i].Name, fields[i].Type, fieldValues[i].String())
+	}
 }
 
 func TestStructFlagging(t *testing.T) {
@@ -32,20 +50,21 @@ func TestStructFlagging(t *testing.T) {
 		"-b",
 		"14",
 	}
-	futureTS, ok := FlagIt(&ts).(*TestStruct)
-	if !ok {
-		t.Fatal("Failed to type-assert interface{} to *TestStruct")
+	fs, err := FlagIt(&ts)
+	if err != nil {
+		t.Fatal(err)
 	}
-	flag.Parse()
-	if futureTS.A != "word" {
+	// Parsing the flagset should cause the struct fields to get set.
+	fs.Parse(os.Args[3:])
+	if ts.A != "word" {
 		t.Error("Failed to parse 'A string' from CLI")
-	} else if futureTS.B != 14 {
+	} else if ts.B != 14 {
 		t.Error("Failed to parse 'B int' from CLI")
 	}
 }
 
 func TestFlagNaming(t *testing.T) {
-	fs, err := InferFlags(ChipotleOrder{})
+	fs, err := FlagIt(ChipotleOrder{})
 	if err != nil {
 		if fs != nil {
 			fs.PrintDefaults()
@@ -65,7 +84,7 @@ func TestFlagNaming(t *testing.T) {
 }
 
 func TestStringFlagParsing(t *testing.T) {
-	fs, err := InferFlags(ChipotleOrder{})
+	fs, err := FlagIt(ChipotleOrder{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -99,7 +118,7 @@ func TestStringFlagParsing(t *testing.T) {
 }
 
 func TestBoolFlagParsing(t *testing.T) {
-	fs, err := InferFlags(ChipotleOrder{})
+	fs, err := FlagIt(ChipotleOrder{})
 	if err != nil {
 		t.Fatal(err)
 	}

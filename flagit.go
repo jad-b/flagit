@@ -9,40 +9,53 @@ import (
 // FlagIt takes an arbitrary struct, and automagically allows it to be parsed
 // from command line arguments.
 //
-// A pointer to the struct post-parsing is made available.
-func FlagIt(v interface{}) interface{} {
-	// TODO handle being passed pointer or value
-	return v
-}
-
-// InferFlags reflects over the struct fields and builds a matching FlagSet,
-// suitable for representing the struct in the command line.
-//
-// A `flag:"flagname"` tag is always preferntially used.
-func InferFlags(v interface{}) (fs *flag.FlagSet, err error) {
-	typ := reflect.TypeOf(v)
-	// If we were given a pointer, deref it with Elem()
-	if typ.Kind() == reflect.Ptr {
-		typ = typ.Elem()
-	}
-	log.Printf("Struct: %s", typ.Name)
+// A `flag:"flagname"` tag is always preferentially used.
+func FlagIt(v interface{}) (fs *flag.FlagSet, err error) {
+	val := reflect.ValueOf(v).Elem()
+	typ := reflect.TypeOf(v).Elem()
+	log.Printf("%s: %s", typ, val)
 
 	// Create FlagSet
 	fs = flag.NewFlagSet(typ.Name(), flag.PanicOnError)
-
-	// Create flag for each struct field
-	for i := 0; i < typ.NumField(); i++ {
-		f := typ.Field(i)
-		log.Printf("Field: %s\n", f.Name)
-		log.Printf("Field type: %s\n", f.Type.String())
-		// Lookup Flag type by field type
-		// Assign to FlagSet by `flagType(*field, ...)`
-	}
+	//if typ.Kind() == reflect.Ptr {
+	//ftype = ftype.Elem()
+	//}
 	return fs, nil
 }
 
 // FlagByType returns the appropriate flag for its type.
-func FlagByType(field reflect.StructField) (f flag.Getter, err error) {
-	// Type switch
-	return f, nil
+func FlagByType(fs *flag.FlagSet, v interface{}) {
+	switch v := v.(type) {
+	case *bool:
+		log.Printf("pointer to boolean %t\n", *v) // t has type *bool
+		fs.BoolVar(v, "bool", false, "")
+	case *int:
+		log.Printf("pointer to integer %d\n", *v) // t has type *int
+	default:
+		log.Printf("unexpected type %t\n", v) // %t prints whatever type t has
+	}
+}
+
+// GetStructFields returns a list of reflect.StructFields.
+func GetStructFields(typ reflect.Type) []reflect.StructField {
+	var fields []reflect.StructField
+	// Iterate over struct fields
+	for i := 0; i < typ.NumField(); i++ {
+		f := typ.Field(i)
+		fields = append(fields, f)
+		if f.Tag.Get("flag") != "" {
+			log.Printf("\tField tag: flag => %s", f.Tag.Get("flag"))
+		}
+	}
+	return fields
+}
+
+// GetFieldValues returns a list of values for the struct fields.
+func GetFieldValues(val reflect.Value) []reflect.Value {
+	var values []reflect.Value
+	// Iterate over struct fields
+	for i := 0; i < val.NumField(); i++ {
+		values = append(values, val.Field(i))
+	}
+	return values
 }
