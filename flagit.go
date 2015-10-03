@@ -52,6 +52,7 @@ func FlagByType(fs *flag.FlagSet, structName string, fval reflect.Value, ftype r
 		log.Printf("pointer to bool %t\n", *fval)
 	case *time.Time:
 		log.Printf("pointer to time.Time %s\n", fval.String())
+		fs.Var((*TimeFlag)(fval), flagName, flagHelp)
 	default:
 		log.Printf("unexpected type %s\n", ftype.Type.String())
 	}
