@@ -58,7 +58,7 @@ func ParseTime(timestamp string) (time.Time, error) {
 			return t, nil
 		}
 	}
-	return time.Time{}, err
+	return time.Now(), err
 }
 
 // URLFlag parses URL(I's) from the command-line

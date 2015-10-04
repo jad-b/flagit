@@ -45,6 +45,19 @@ func TestSampleStructFlagging(t *testing.T) {
 
 }
 
+func TestEmptyTimestamp(t *testing.T) {
+	type TimeStruct struct {
+		Timestamp time.Time
+	}
+	ts := TimeStruct{}
+	fs := FlagIt(&ts)
+	fs.Parse([]string{})
+
+	if ts.Timestamp == *new(time.Time) {
+		t.Error("Failed to default time.Time to Now()")
+	}
+}
+
 type TestStruct struct {
 	A string
 	B int

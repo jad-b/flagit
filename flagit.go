@@ -35,12 +35,13 @@ func FlagByType(fs *flag.FlagSet, structName string, fval reflect.Value, ftype r
 		log.Printf("Skipping field %s: %s", ftype.Name, ftype.Type.String())
 		return
 	}
-	log.Printf("Getting pointer to %s", ftype.Name)
+	//log.Printf("Getting pointer to %s", ftype.Name)
 	fval = fval.Addr()
 	flagName := NameToFlag(ftype.Name)
 	flagHelp := fmt.Sprintf("%s:%s", structName, ftype.Name)
+	log.Printf("Converting %s => %s", ftype.Name, flagName)
 
-	log.Printf("Switching on type %s...", ftype.Type.String())
+	//log.Printf("Switching on type %s...", ftype.Type.String())
 	switch fval := fval.Interface().(type) {
 	case *int:
 		fs.IntVar(fval, flagName, 0, flagHelp)
@@ -51,6 +52,8 @@ func FlagByType(fs *flag.FlagSet, structName string, fval reflect.Value, ftype r
 	case *bool:
 		fs.BoolVar(fval, flagName, false, flagHelp)
 	case *time.Time:
+		t := (*time.Time)(fval) // Get a *time.Time pointer to fval
+		*t = time.Now()         // Set a default of time.Now()
 		fs.Var((*TimeFlag)(fval), flagName, flagHelp)
 	default:
 		log.Printf("unexpected type %s\n", ftype.Type.String())
