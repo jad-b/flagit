@@ -17,7 +17,6 @@ import (
 func FlagIt(v interface{}) (fs *flag.FlagSet) {
 	val := reflect.ValueOf(v).Elem()
 	structName := val.Type().Name()
-	log.Printf("%s: %s", structName, val)
 
 	// Create FlagSet
 	fs = flag.NewFlagSet(structName, flag.ContinueOnError)
@@ -31,27 +30,27 @@ func FlagIt(v interface{}) (fs *flag.FlagSet) {
 // FlagByType sets the appropriate flag for its type.
 func FlagByType(fs *flag.FlagSet, structName string, fval reflect.Value, ftype reflect.StructField) {
 	// Get a pointer; FlagSet needs a pointer to set the struct's field
-	if fval.Kind() != reflect.Ptr {
-		fval = fval.Addr()
+	if fval.Kind() == reflect.Ptr {
+		// Short-circuit
+		log.Printf("Skipping field %s: %s", ftype.Name, ftype.Type.String())
+		return
 	}
+	log.Printf("Getting pointer to %s", ftype.Name)
+	fval = fval.Addr()
 	flagName := NameToFlag(ftype.Name)
 	flagHelp := fmt.Sprintf("%s:%s", structName, ftype.Name)
 
 	log.Printf("Switching on type %s...", ftype.Type.String())
 	switch fval := fval.Interface().(type) {
 	case *int:
-		log.Printf("pointer to integer %d\n", *fval)
 		fs.IntVar(fval, flagName, 0, flagHelp)
 	case *float64:
-		log.Printf("pointer to float64 %g\n", *fval)
 		fs.Float64Var(fval, flagName, 0.0, flagHelp)
 	case *string:
-		log.Printf("pointer to string %s\n", *fval)
 		fs.StringVar(fval, flagName, "", flagHelp)
 	case *bool:
-		log.Printf("pointer to bool %t\n", *fval)
+		fs.BoolVar(fval, flagName, false, flagHelp)
 	case *time.Time:
-		log.Printf("pointer to time.Time %s\n", fval.String())
 		fs.Var((*TimeFlag)(fval), flagName, flagHelp)
 	default:
 		log.Printf("unexpected type %s\n", ftype.Type.String())

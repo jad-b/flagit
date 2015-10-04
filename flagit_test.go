@@ -3,6 +3,7 @@ package flagit
 import (
 	"encoding/json"
 	"flag"
+	"log"
 	"os"
 	"reflect"
 	"strings"
@@ -20,22 +21,28 @@ type SampleStruct struct {
 func TestSampleStructFlagging(t *testing.T) {
 	ss := SampleStruct{}
 	fs := FlagIt(&ss)
+	expTime := time.Now()
 	args := []string{
 		"-int", "53",
 		"-float", "172.345",
 		"-string", "this be a string",
-		"-timestamp", "02 Jan 06 15:04 MST",
+		"-timestamp", expTime.Format(time.RFC3339Nano),
 	}
 
 	fs.Parse(args)
-	expTime, _ := time.Parse(args[3], time.RFC822)
-	if ss.Int != 53 ||
-		ss.Timestamp != expTime ||
-		ss.Float != 172.345 ||
-		ss.String != args[7] {
-		b, _ := json.MarshalIndent(&ss, "", "\t")
-		t.Errorf("Parsed value:\n%s", string(b))
+	b, _ := json.MarshalIndent(&ss, "", "\t")
+	t.Logf("Parsed value:\n%s", string(b))
+	if ss.Int != 53 {
+		t.Error("failed to parse int")
+	} else if ss.Timestamp != expTime {
+		t.Errorf("failed to parse timestamp\n%s != %s",
+			ss.Timestamp.String(), expTime.String())
+	} else if ss.Float != 172.345 {
+		t.Error("failed to parse float")
+	} else if ss.String != args[5] {
+		t.Error("failed to parse string")
 	}
+
 }
 
 type TestStruct struct {
@@ -45,28 +52,19 @@ type TestStruct struct {
 	APtr *string
 	BPtr *int
 
-	ASlice []string
-	BSlice []int
-}
-
-func (ts *TestStruct) NewFlagSet() (fs *flag.FlagSet, err error) {
-	fs = flag.NewFlagSet("TestStruct", flag.ContinueOnError)
-	// for each field in struct
-	// assign a flag, using the struct type
-	fs.StringVar(&ts.A, "a", "", "")
-	fs.IntVar(&ts.B, "b", 0, "")
-	return fs, nil
+	//ASlice []string
+	//BSlice []int
 }
 
 func TestFieldReflection(t *testing.T) {
 	s, i := "a string", 42
 	ts := TestStruct{
-		A:      "A is a string",
-		B:      42,
-		APtr:   &s,
-		BPtr:   &i,
-		ASlice: []string{"ASlice", "is", "a", "[]string"},
-		BSlice: []int{42, 4, 2},
+		A:    "A is a string",
+		B:    42,
+		APtr: &s,
+		BPtr: &i,
+		//ASlice: []string{"ASlice", "is", "a", "[]string"},
+		//BSlice: []int{42, 4, 2},
 	}
 	fMetas := GetFieldMeta(ts)
 
@@ -74,14 +72,12 @@ func TestFieldReflection(t *testing.T) {
 		fm := fMetas[i]
 		b, _ := json.Marshal(&fm)
 		t.Logf("%s", string(b))
-		if fm.Kind == reflect.Ptr {
-			t.Log("\t is a pointer")
-		}
 	}
 }
 
 func TestStructFlagging(t *testing.T) {
-	ts := TestStruct{}
+	s := "balls"
+	ts := TestStruct{APtr: &s}
 	os.Args = []string{
 		"prog",         // Dropped by flag.Parse
 		"-cmd",         // Should be ignored
@@ -91,6 +87,7 @@ func TestStructFlagging(t *testing.T) {
 		"-b",
 		"14",
 	}
+	log.Printf("%#v", ts)
 	fs := FlagIt(&ts)
 	// Parsing the flagset should cause the struct fields to get set.
 	fs.Parse(os.Args[3:])

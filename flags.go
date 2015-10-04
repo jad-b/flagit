@@ -1,7 +1,7 @@
 package flagit
 
 import (
-	"log"
+	"net/url"
 	"time"
 )
 
@@ -55,9 +55,29 @@ func ParseTime(timestamp string) (time.Time, error) {
 		// Try to parse
 		t, err := time.Parse(timeFmt, timestamp)
 		if err == nil { // If successful, return
-			log.Print("Parsed!", t.String())
 			return t, nil
 		}
 	}
 	return time.Time{}, err
+}
+
+// URLFlag parses URL(I's) from the command-line
+type URLFlag url.URL
+
+func (u *URLFlag) String() string {
+	return (*url.URL)(u).String()
+}
+
+// Set converts the CLI URL string into a url.URL.
+func (u *URLFlag) Set(val string) error {
+	earl, err := url.Parse(val)
+	if err == nil {
+		*u = URLFlag(*earl)
+	}
+	return err
+}
+
+// Get returns the underlying url.URL
+func (u *URLFlag) Get() interface{} {
+	return url.URL(*u)
 }
