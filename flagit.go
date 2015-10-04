@@ -105,5 +105,6 @@ func GetFieldMeta(v interface{}) []FieldMeta {
 
 // NameToFlag converts a CamelCased Go string into all lowercase with hyphens.
 func NameToFlag(name string) string {
+	//pattern := regexp.MustCompile(`(([a-z]+)|([A-Z]+)|([A-Z]+?[^A-Z]+))+`)
 	return strings.ToLower(name)
 }

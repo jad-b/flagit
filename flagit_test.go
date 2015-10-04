@@ -181,3 +181,22 @@ func TestBoolFlagParsing(t *testing.T) {
 		}
 	}
 }
+
+func TestFlagNameCreation(t *testing.T) {
+	testNames := []struct {
+		in  string
+		out string
+	}{
+		{"privateVar", "private-var"},
+		{"UserID", "user-id"},
+		{"ComplexPhraseThingy", "complex-phrase-thingy"},
+		{"RESTfulAPIName", "restful-api-name"},
+	}
+	for _, n := range testNames {
+		log.Print("Checking ", n.in)
+		out := NameToFlag(n.in)
+		if out != n.out {
+			t.Errorf("%s => %s; wanted %s", n.in, out, n.out)
+		}
+	}
+}
